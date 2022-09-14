@@ -32,7 +32,7 @@ type RestClient interface {
 const DefaultResponseWindow = 5000
 
 func NewRestClient(key, secret string) RestClient {
-	return &restClient{
+	return &RestClientImplementation{
 		apikey: key,
 		hmac:   hmac.New(sha256.New, s2b(secret)),
 		client: newHTTPClient(),
@@ -43,7 +43,7 @@ func NewRestClient(key, secret string) RestClient {
 func NewRestClientHTTP2(key, secret string) (RestClient, error) {
 	c, err := newHTTP2Client()
 
-	return &restClient{
+	return &RestClientImplementation{
 		apikey: key,
 		hmac:   hmac.New(sha256.New, s2b(secret)),
 		client: c,
@@ -72,7 +72,7 @@ func (c RestClientConfig) defaults() RestClientConfig {
 func NewCustomRestClient(config RestClientConfig) RestClient {
 	c := config.defaults()
 
-	return &restClient{
+	return &RestClientImplementation{
 		apikey: c.APIKey,
 		hmac:   hmac.New(sha256.New, s2b(c.APISecret)),
 		client: c.HTTPClient,
@@ -80,8 +80,8 @@ func NewCustomRestClient(config RestClientConfig) RestClient {
 	}
 }
 
-// restClient represents the actual HTTP RestClient, that is being used to interact with binance API server
-type restClient struct {
+// RestClientImplementation represents the actual HTTP RestClient, that is being used to interact with binance API server
+type RestClientImplementation struct {
 	apikey     string
 	hmac       hash.Hash
 	client     *fasthttp.HostClient
@@ -137,7 +137,7 @@ func newHTTPClient() *fasthttp.HostClient {
 // Do invokes the given API command with the given data
 // sign indicates whether the api call should be done with signed payload
 // stream indicates if the request is stream related
-func (c *restClient) Do(method, endpoint string, data interface{}, sign, stream bool) ([]byte, error) {
+func (c *RestClientImplementation) Do(method, endpoint string, data interface{}, sign, stream bool) ([]byte, error) {
 	// Convert the given data to urlencoded format
 	values, err := query.Values(data)
 	if err != nil {
@@ -285,11 +285,11 @@ func getHeader(header, search []byte) []byte {
 }
 
 // SetWindow to specify response time window in milliseconds
-func (c *restClient) SetWindow(window int) {
+func (c *RestClientImplementation) SetWindow(window int) {
 	c.window = window
 }
 
-func (c *restClient) UsedWeight() map[string]int {
+func (c *RestClientImplementation) UsedWeight() map[string]int {
 	res := make(map[string]int)
 	c.usedWeight.Range(func(k, v interface{}) bool {
 		key, ok1 := k.(string)
@@ -304,7 +304,7 @@ func (c *restClient) UsedWeight() map[string]int {
 	return res
 }
 
-func (c *restClient) OrderCount() map[string]int {
+func (c *RestClientImplementation) OrderCount() map[string]int {
 	res := make(map[string]int)
 	c.usedWeight.Range(func(k, v interface{}) bool {
 		key, ok1 := k.(string)
@@ -319,7 +319,7 @@ func (c *restClient) OrderCount() map[string]int {
 	return res
 }
 
-func (c *restClient) RetryAfter() int {
+func (c *RestClientImplementation) RetryAfter() int {
 	retry, ok := c.retryAfter.Load().(int)
 	if ok {
 		return retry
